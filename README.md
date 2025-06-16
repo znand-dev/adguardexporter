@@ -42,10 +42,12 @@ A lightweight Prometheus exporter written in Go that exposes detailed metrics fr
 docker run -d \
   --name adguard_exporter \
   --restart unless-stopped \
-  -p 9617:9617 \
-  -e ADGUARD_URL=http://192.168.1.1:3000 \
+  -p 9200:9200 \
+  -e ADGUARD_URL=http://172.31.20.12 \
   -e ADGUARD_USERNAME=admin \
-  -e ADGUARD_PASSWORD=yourpassword \
+  -e ADGUARD_PASSWORD=dt2030jaya \
+  -e EXPORTER_PORT=9200 \
+  -e SCRAPE_INTERVAL=15s \
   znanddev/adguard-exporter:latest
 ```
 
