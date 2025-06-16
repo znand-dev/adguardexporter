@@ -1,0 +1,9 @@
+# Binaries
+adguard-exporter-go
+
+# Env file
+.env
+
+# OS / Editor files
+.DS_Store
+*.swp
