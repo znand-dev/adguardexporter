@@ -19,7 +19,6 @@ A lightweight Prometheus exporter written in Go that exposes detailed metrics fr
 - [Go (Golang)](https://golang.org/)
 - [Prometheus Client Library](https://github.com/prometheus/client_golang)
 - [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)
-- [Uber Zap Logging](https://github.com/uber-go/zap)
 
 ---
 
@@ -30,7 +29,7 @@ A lightweight Prometheus exporter written in Go that exposes detailed metrics fr
 | `ADGUARD_URL`     | URL to your AdGuard Home API          | ✅       | `http://192.168.1.1:3000`    |
 | `ADGUARD_USERNAME`| AdGuard Home username                 | ✅       | `admin`                      |
 | `ADGUARD_PASSWORD`| AdGuard Home password                 | ✅       | `secretpassword`             |
-| `EXPORTER_PORT`   | Port to expose metrics (default: 9617)| ❌       | `9617`                       |
+| `EXPORTER_PORT`   | Port to expose metrics (default: 9617)| ❌       | `9200`                       |
 | `SCRAPE_INTERVAL` | How often to scrape (default: 15s)    | ❌       | `30s`                        |
 
 ---
@@ -56,22 +55,25 @@ docker run -d \
 
 ### 1. Clone This Repo
 
-```bash
-git clone https://github.com/znand-dev/adguard-exporter.git
-cd adguard-exporter
+```yaml
+version: '3.8'
+
+services:
+  adguard-exporter:
+    image: znanddev/adguard-exporter:latest
+    container_name: adguard_exporter
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    environment:
+      - ADGUARD_URL=http://192.168.18.1
+      - ADGUARD_USERNAME=admin
+      - ADGUARD_PASSWORD=admin
+      - EXPORTER_PORT=9200
+      - SCRAPE_INTERVAL=15s
 ```
 
-### 2. Create `.env`
-
-```env
-ADGUARD_URL=http://192.168.1.1:3000
-ADGUARD_USERNAME=admin
-ADGUARD_PASSWORD=yourpassword
-EXPORTER_PORT=9617
-SCRAPE_INTERVAL=15s
-```
-
-### 3. Run with Compose
+### 2. Run with Compose
 
 ```bash
 docker-compose up -d
