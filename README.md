@@ -43,9 +43,9 @@ docker run -d \
   --name adguard_exporter \
   --restart unless-stopped \
   -p 9200:9200 \
-  -e ADGUARD_URL=http://172.31.20.12 \
+  -e ADGUARD_URL=http://192.168.18.1 \
   -e ADGUARD_USERNAME=admin \
-  -e ADGUARD_PASSWORD=dt2030jaya \
+  -e ADGUARD_PASSWORD=mysecretpassword \
   -e EXPORTER_PORT=9200 \
   -e SCRAPE_INTERVAL=15s \
   znanddev/adguard-exporter:latest
