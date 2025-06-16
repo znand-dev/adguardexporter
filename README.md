@@ -29,7 +29,7 @@ A lightweight Prometheus exporter written in Go that exposes detailed metrics fr
 | `ADGUARD_URL`     | URL to your AdGuard Home API          | ✅       | `http://192.168.1.1:3000`    |
 | `ADGUARD_USERNAME`| AdGuard Home username                 | ✅       | `admin`                      |
 | `ADGUARD_PASSWORD`| AdGuard Home password                 | ✅       | `secretpassword`             |
-| `EXPORTER_PORT`   | Port to expose metrics (default: 9617)| ❌       | `9200`                       |
+| `EXPORTER_PORT`   | Port to expose metrics (default: 9200)| ❌       | `9200`                       |
 | `SCRAPE_INTERVAL` | How often to scrape (default: 15s)    | ❌       | `30s`                        |
 
 ---
