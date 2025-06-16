@@ -103,7 +103,28 @@ http://<host>:9617/metrics
   static_configs:
     - targets: ['adguard-exporter:9617']
 ```
+---
+## 📊 Available Prometheus Metrics
+This exporter exposes the following metrics from AdGuard Home:
 
+- `adguard_protection_enabled`: Whether DNS filtering is enabled
+- `adguard_running`: Whether AdGuard Home is running
+- `adguard_queries`: Total DNS queries in the last 24 hours
+- `adguard_blocked_filtered`: Queries blocked by filter lists
+- `adguard_blocked_safesearch`: Queries blocked due to SafeSearch
+- `adguard_blocked_safebrowsing`: Queries blocked due to SafeBrowsing
+- `adguard_avg_processing_time_seconds`: Average DNS query processing time in seconds
+- `adguard_scrape_errors_total`: Total number of scrape errors
+- `adguard_dhcp_enabled`: Whether DHCP server is enabled
+- `adguard_dhcp_leases`: Number of active DHCP leases
+
+Metrics with labels:
+- `adguard_top_queried_domains{domain="example.com"}`
+- `adguard_top_blocked_domains{domain="ads.example.com"}`
+- `adguard_top_clients{client="192.168.1.2"}`
+- `adguard_top_upstreams{upstream="8.8.8.8"}`
+- `adguard_top_upstreams_avg_response_time_seconds{upstream="8.8.8.8"}`
+---
 ---
 
 ## 📃 License
