@@ -88,7 +88,7 @@ docker-compose up -d
 Once running, your exporter will be available at:
 
 ```
-http://<host>:9617/metrics
+http://<host>:9200/metrics
 ```
 
 ✅ Ready to scrape by Prometheus!
@@ -101,7 +101,7 @@ http://<host>:9617/metrics
 - job_name: 'adguard-exporter'
   scrape_interval: 15s
   static_configs:
-    - targets: ['adguard-exporter:9617']
+    - targets: ['adguard-exporter:9200']
 ```
 ---
 ## 📊 Available Prometheus Metrics
