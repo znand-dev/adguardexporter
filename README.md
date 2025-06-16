@@ -55,7 +55,7 @@ docker run -d \
 
 ## 📦 Run via Docker Compose
 
-### 1. Clone This Repo
+### 1. Create docker-compose.yml in your root dir
 
 ```yaml
 version: '3.8'
@@ -75,7 +75,7 @@ services:
       - SCRAPE_INTERVAL=15s
 ```
 
-### 2. Run with Compose
+### 2. Run with Docker Compose
 
 ```bash
 docker-compose up -d
