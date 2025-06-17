@@ -1,28 +1,28 @@
 project_name: adguard-exporter
-release:
-  github:
-    owner: znand-dev
-    name: adguardexportergo
-
 builds:
-  - id: adguard-exporter
-    main: ./main.go
-    goos: [linux, windows, darwin]
-    goarch: [amd64, arm64, arm]
-    goarm: [6]
+  - main: ./main.go
+    binary: adguard-exporter
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
     ldflags:
       - -s -w
-    binary: adguard-exporter
 
 archives:
   - format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - adguard-exporter
       - LICENSE
 
 checksum:
   name_template: "checksums.txt"
 
-changelog:
-  sort: asc
+release:
+  github:
+    owner: znand-dev
+    name: adguardexportergo
