@@ -283,4 +283,3 @@ func main() {
 	logInfo("Starting AdGuard exporter on :%s", exporterPort)
 	log.Fatal(http.ListenAndServe(":"+exporterPort, nil))
 }
-
