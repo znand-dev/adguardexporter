@@ -38,9 +38,13 @@ curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/stats
 curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/status
 curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/querylog
 ```
+---
 ![Stats](./assets/checking_stats_endpoint.png)
+---
 ![Status](./assets/checking_status_endpoint.png)
+---
 ![QueryLog](./assets/checking_querylog_endpoint.png)
+---
 
 ---
 ## ⚙️ Environment Variables
