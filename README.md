@@ -21,7 +21,28 @@ A lightweight Prometheus exporter written in Go that exposes detailed metrics fr
 - [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)
 
 ---
+## ✅ Prerequisites
 
+Before running this exporter, make sure:
+
+- 🛡️ AdGuard Home is up and running
+- 🔐 You have a valid AdGuard username & password
+- 📡 Prometheus is configured to scrape this exporter
+- 🐳 Docker installed (or alternatively Go 1.20+ for building from source)
+- 🔓 Port `9200` is available on your system
+
+To make sure the endpoint is valid, you can check the endpoints via curl
+
+```
+curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/stats
+curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/status
+curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/querylog
+```
+![Stats](./assets/checking_stats_endpoint.png)
+![Status](./assets/checking_status_endpoint.png)
+![QueryLog](./assets/checking_querylog_endpoint.png)
+
+---
 ## ⚙️ Environment Variables
 
 | Variable         | Description                            | Required | Example                      |
