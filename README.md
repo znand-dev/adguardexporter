@@ -51,9 +51,9 @@ curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/querylog
 
 | Variable         | Description                            | Required | Example                      |
 |------------------|----------------------------------------|----------|------------------------------|
-| `ADGUARD_URL`     | URL to your AdGuard Home API          | ✅       | `http://192.168.1.1:3000`    |
-| `ADGUARD_USERNAME`| AdGuard Home username                 | ✅       | `admin`                      |
-| `ADGUARD_PASSWORD`| AdGuard Home password                 | ✅       | `secretpassword`             |
+| `ADGUARD_HOST`     | URL to your AdGuard Home API          | ✅       | `http://192.168.1.1:3000`    |
+| `ADGUARD_USER`| AdGuard Home username                 | ✅       | `admin`                      |
+| `ADGUARD_PASS`| AdGuard Home password                 | ✅       | `secretpassword`             |
 | `EXPORTER_PORT`   | Port to expose metrics (default: 9200)| ❌       | `9200`                       |
 | `SCRAPE_INTERVAL` | How often to scrape (default: 15s)    | ❌       | `30s`                        |
 | `LOG_LEVEL`       | Log Level to analyze, INFO, WARN, DEBUG | ❌      | `DEBUG`,`WARN`,`INFO`        |
