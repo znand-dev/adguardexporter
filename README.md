@@ -56,6 +56,7 @@ curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/querylog
 | `ADGUARD_PASSWORD`| AdGuard Home password                 | ✅       | `secretpassword`             |
 | `EXPORTER_PORT`   | Port to expose metrics (default: 9200)| ❌       | `9200`                       |
 | `SCRAPE_INTERVAL` | How often to scrape (default: 15s)    | ❌       | `30s`                        |
+| `LOG_LEVEL`       | Log Level to analyze, INFO, WARN, DEBUG | ❌      | `DEBUG`,`WARN`,`INFO`        |
 
 ---
 
@@ -68,11 +69,12 @@ docker run -d \
   --name adguard_exporter \
   --restart unless-stopped \
   -p 9200:9200 \
-  -e ADGUARD_URL=http://192.168.18.1 \
-  -e ADGUARD_USERNAME=admin \
-  -e ADGUARD_PASSWORD=mysecretpassword \
+  -e ADGUARD_HOST=http://192.168.18.1 \
+  -e ADGUARD_USER=admin \
+  -e ADGUARD_PASS=mysecretpassword \
   -e EXPORTER_PORT=9200 \
   -e SCRAPE_INTERVAL=15s \
+  -e LOG_LEVEL=DEBUG
   znanddev/adguard-exporter:latest
 ```
 
