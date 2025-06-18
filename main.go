@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -13,254 +15,275 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Logging level
-var logLevel string
-
-func logDebug(format string, v ...interface{}) {
-	if logLevel == "debug" {
-		log.Printf("[DEBUG] "+format, v...)
-	}
-}
-func logInfo(format string, v ...interface{}) {
-	if logLevel == "debug" || logLevel == "info" {
-		log.Printf("[INFO] "+format, v...)
-	}
-}
-func logWarn(format string, v ...interface{}) {
-	if logLevel == "debug" || logLevel == "info" || logLevel == "warn" {
-		log.Printf("[WARN] "+format, v...)
-	}
-}
-
-// Structs
-type AdGuardStatus struct {
-    Running           bool    `json:"running"`
-    ProtectionEnabled bool    `json:"protection_enabled"`
-    DNS struct {
-        Enabled         bool     `json:"enabled"`
-        Upstreams       []string `json:"upstream_dns"`
-        ProcessingTime  float64  `json:"avg_processing_time"`
-    } `json:"dns"`
-    DHCP struct {
-        Enabled bool `json:"enabled"`
-        Leases  []struct {
-            IP      string `json:"ip"`
-            MAC     string `json:"mac"`
-            Host    string `json:"hostname"`
-            Expires string `json:"expires"`
-        } `json:"leases"`
-    } `json:"dhcp"`
-}
-
 type AdGuardStats struct {
-    TimeUnits               string              `json:"time_units"`
-    DNSQueries              []int               `json:"dns_queries"`
-    BlockedFiltering        []int               `json:"blocked_filtering"`
-    ReplacedSafebrowsing    []int               `json:"replaced_safebrowsing"`
-    ReplacedSafesearch      []int               `json:"replaced_safesearch"`
-    TopQueried              []map[string]int    `json:"top_queried_domains"`
-    TopBlocked              []map[string]int    `json:"top_blocked_domains"`
-    TopClients              []map[string]int    `json:"top_clients"`
-    TopUpstreams            []map[string]int    `json:"top_upstreams_responses"`  // <== fix
-    TopUpstreamsResponseTimes []map[string]float64 `json:"top_upstreams_avg_time"` // <== fix
+	NumDNSQueries       float64              `json:"num_dns_queries"`
+	NumBlockedFiltering float64              `json:"num_blocked_filtering"`
+	NumReplacedParental float64              `json:"num_replaced_parental"`
+	AvgProcessingTime   float64              `json:"avg_processing_time"`
+	TopQueriedDomains   []map[string]float64 `json:"top_queried_domains"`
+	TopBlockedDomains   []map[string]float64 `json:"top_blocked_domains"`
+	TopClients          []map[string]float64 `json:"top_clients"`
+	TopUpstream         []map[string]float64 `json:"top_upstreams_responses"`
+	TopUpstreamTime     []map[string]float64 `json:"top_upstreams_avg_time"`
+}
+
+type AdGuardStatus struct {
+	Version                    string   `json:"version"`
+	Language                   string   `json:"language"`
+	DNSAddresses               []string `json:"dns_addresses"`
+	DNSPort                    int      `json:"dns_port"`
+	HTTPPort                   int      `json:"http_port"`
+	ProtectionDisabledDuration int      `json:"protection_disabled_duration"`
+	ProtectionEnabled          bool     `json:"protection_enabled"`
+	DHCPAvailable              bool     `json:"dhcp_available"`
+	Running                    bool     `json:"running"`
+}
+
+type AdGuardQueryLog struct {
+	Data []struct {
+		Question struct {
+			Type string `json:"type"`
+			Name string `json:"name"`
+		} `json:"question"`
+		Answer   []string `json:"answer"`
+		Reason   string   `json:"reason"`
+		Client   string   `json:"client"`
+		Elapsed  float64  `json:"elapsedMs"`
+		Upstream string   `json:"upstream"`
+	} `json:"data"`
 }
 
 var (
-	adguardURL, adguardUsername, adguardPassword, exporterPort string
-	scrapeInterval time.Duration
-
-	// Prometheus metrics
-	scrapeErrors = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "adguard_scrape_errors_total",
-		Help: "The number of errors scraping a target",
+	// Stats & Status
+	dnsQueries = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "adguard_dns_queries_total", Help: "Total DNS queries received",
 	})
-	protectionEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_protection_enabled",
-		Help: "Whether DNS filtering is enabled",
+	blockedFiltering = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "adguard_blocked_filtering_total", Help: "Total DNS queries blocked",
 	})
-	adguardRunning = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_running",
-		Help: "Whether adguard is running or not",
-	})
-	queries24h = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_queries",
-		Help: "Total queries processed in the last 24 hours",
-	})
-	blockedFiltered = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_blocked_filtered",
-		Help: "Total queries blocked from filter lists",
-	})
-	blockedSafesearch = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_blocked_safesearch",
-		Help: "Total queries blocked by safesearch",
-	})
-	blockedSafebrowsing = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_blocked_safebrowsing",
-		Help: "Total queries blocked by safebrowsing",
+	replacedParental = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "adguard_replaced_parental", Help: "Total parental-replaced queries",
 	})
 	avgProcessingTime = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_avg_processing_time_seconds",
-		Help: "The average query processing time in seconds",
+		Name: "adguard_avg_processing_time", Help: "Avg DNS processing time (ms)",
 	})
+	statusProtectionEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "adguard_protection_enabled", Help: "Protection enabled (1/0)",
+	})
+	statusRunning = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "adguard_running", Help: "AdGuard service running (1/0)",
+	})
+	statusDHCPAvailable = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "adguard_dhcp_available", Help: "DHCP available (1/0)",
+	})
+	statusDisabledDuration = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "adguard_protection_disabled_duration_seconds",
+		Help: "Time since protection disabled (s)",
+	})
+	versionInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "adguard_version_info", Help: "AdGuard version info",
+	}, []string{"version"})
+
+	// Top stats
 	topQueriedDomains = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "adguard_top_queried_domains",
-		Help: "Top queried domains",
+		Name: "adguard_top_queried_domain_total", Help: "Top queried domains",
 	}, []string{"domain"})
 	topBlockedDomains = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "adguard_top_blocked_domains",
-		Help: "Top blocked domains",
+		Name: "adguard_top_blocked_domain_total", Help: "Top blocked domains",
 	}, []string{"domain"})
 	topClients = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "adguard_top_clients",
-		Help: "Top clients",
+		Name: "adguard_top_client_total", Help: "Top client IPs",
 	}, []string{"client"})
 	topUpstreams = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "adguard_top_upstreams",
-		Help: "Top upstreams by response count",
+		Name: "adguard_top_upstream_total", Help: "Top upstream servers",
 	}, []string{"upstream"})
-	topUpstreamsResponseTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "adguard_top_upstreams_avg_response_time_seconds",
-		Help: "Top upstreams by average response time",
+	topUpstreamTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "adguard_upstream_avg_response_time_seconds",
+		Help: "Avg response time per upstream (s)",
 	}, []string{"upstream"})
-	dhcpEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_dhcp_enabled",
-		Help: "Whether DHCP is enabled",
-	})
-	dhcpLeases = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "adguard_dhcp_leases",
-		Help: "DHCP lease count",
-	})
+
+	// Querylog
+	queryCountByReason = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "adguard_query_reason_total", Help: "Total queries by reason",
+	}, []string{"reason"})
+	queryCountByType = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "adguard_query_type_total", Help: "Total queries by DNS type",
+	}, []string{"type"})
+	queryHistogramByClient = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "adguard_query_elapsed_ms",
+		Help:    "Query duration by client in ms",
+		Buckets: prometheus.LinearBuckets(1, 5, 10),
+	}, []string{"client"})
+        	queryCountByUpstream = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "adguard_query_upstream_total",
+		Help: "Total queries per upstream DNS server",
+	}, []string{"upstream"})
+
+	queryCountByDomain = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "adguard_query_domain_total",
+		Help: "Total queries per domain",
+	}, []string{"domain"})
+
+	queryCountClientReason = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "adguard_query_client_reason_total",
+		Help: "Total queries by client and reason",
+	}, []string{"client", "reason"})
+
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		logWarn("Could not load .env file: %v", err)
-	}
+	_ = godotenv.Load()
+	prometheus.MustRegister(
+		dnsQueries, blockedFiltering, replacedParental, avgProcessingTime,
+		statusProtectionEnabled, statusRunning, statusDHCPAvailable, statusDisabledDuration, versionInfo,
+		topQueriedDomains, topBlockedDomains, topClients, topUpstreams, topUpstreamTime,
+		queryCountByReason, queryCountByType, queryHistogramByClient,
+	)
+        prometheus.MustRegister(queryCountByUpstream)
+	prometheus.MustRegister(queryCountByDomain)
+	prometheus.MustRegister(queryCountClientReason)
 
-	logLevel = os.Getenv("LOG_LEVEL")
-	if logLevel == "" {
-		logLevel = "info"
-	}
-
-	adguardURL = os.Getenv("ADGUARD_URL")
-	adguardUsername = os.Getenv("ADGUARD_USERNAME")
-	adguardPassword = os.Getenv("ADGUARD_PASSWORD")
-	exporterPort = os.Getenv("EXPORTER_PORT")
-	if exporterPort == "" {
-		exporterPort = "9200"
-	}
-
-	interval := os.Getenv("SCRAPE_INTERVAL")
-	if interval == "" {
-		interval = "15s"
-	}
-	scrapeInterval, err = time.ParseDuration(interval)
-	if err != nil {
-		log.Fatalf("Invalid SCRAPE_INTERVAL: %v", err)
-	}
-
-	// Register metrics
-	prometheus.MustRegister(scrapeErrors, protectionEnabled, adguardRunning,
-		queries24h, blockedFiltered, blockedSafesearch, blockedSafebrowsing,
-		avgProcessingTime, topQueriedDomains, topBlockedDomains, topClients,
-		topUpstreams, topUpstreamsResponseTime, dhcpEnabled, dhcpLeases)
 }
 
-func fetchAdGuardData(endpoint string, target interface{}) error {
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", adguardURL+endpoint, nil)
-	if err != nil {
-		return err
+func logLevel(level, msg string) {
+	logLevelEnv := os.Getenv("LOG_LEVEL")
+	allowed := map[string]int{"ERROR": 1, "WARN": 2, "INFO": 3, "DEBUG": 4}
+	current := allowed[logLevelEnv]
+	if current == 0 {
+		current = 3
 	}
-	req.SetBasicAuth(adguardUsername, adguardPassword)
+	if allowed[level] <= current {
+		log.Printf("[%s] %s", level, msg)
+	}
+}
 
+func fetchStats() (*AdGuardStats, error) {
+	host := os.Getenv("ADGUARD_HOST")
+	user := os.Getenv("ADGUARD_USER")
+	pass := os.Getenv("ADGUARD_PASS")
+	url := host + "/control/stats"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.SetBasicAuth(user, pass)
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	var stats AdGuardStats
+	json.Unmarshal(body, &stats)
+	return &stats, nil
+}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed with status %d", resp.StatusCode)
+func fetchStatus() (*AdGuardStatus, error) {
+	host := os.Getenv("ADGUARD_HOST")
+	user := os.Getenv("ADGUARD_USER")
+	pass := os.Getenv("ADGUARD_PASS")
+	url := host + "/control/status"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.SetBasicAuth(user, pass)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
 	}
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	var status AdGuardStatus
+	json.Unmarshal(body, &status)
+	return &status, nil
+}
 
-	return json.NewDecoder(resp.Body).Decode(target)
+func fetchQueryLog() (*AdGuardQueryLog, error) {
+	host := os.Getenv("ADGUARD_HOST")
+	user := os.Getenv("ADGUARD_USER")
+	pass := os.Getenv("ADGUARD_PASS")
+	url := host + "/control/querylog"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.SetBasicAuth(user, pass)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	var logData AdGuardQueryLog
+	json.Unmarshal(body, &logData)
+	return &logData, nil
+}
+
+func updateQueryLogMetrics() {
+	logData, err := fetchQueryLog()
+	if err != nil {
+		logLevel("ERROR", fmt.Sprintf("Failed to fetch querylog: %v", err))
+		return
+	}
+	for _, q := range logData.Data {
+		queryCountByReason.WithLabelValues(q.Reason).Inc()
+                queryCountByType.WithLabelValues(q.Question.Type).Inc()
+		queryHistogramByClient.WithLabelValues(q.Client).Observe(q.Elapsed)
+                queryCountByUpstream.WithLabelValues(q.Upstream).Inc()
+		queryCountByDomain.WithLabelValues(q.Question.Name).Inc()
+		queryCountClientReason.WithLabelValues(q.Client, q.Reason).Inc()
+	}
+	logLevel("DEBUG", fmt.Sprintf("Processed %d querylog entries", len(logData.Data)))
 }
 
 func updateMetrics() {
-	topQueriedDomains.Reset()
-	topBlockedDomains.Reset()
-	topClients.Reset()
-	topUpstreams.Reset()
-	topUpstreamsResponseTime.Reset()
+	stats, err := fetchStats()
+	if err == nil {
+		dnsQueries.Set(stats.NumDNSQueries)
+		blockedFiltering.Set(stats.NumBlockedFiltering)
+		replacedParental.Set(stats.NumReplacedParental)
+		avgProcessingTime.Set(stats.AvgProcessingTime)
 
-	var status AdGuardStatus
-	if err := fetchAdGuardData("/control/status", &status); err != nil {
-		logWarn("Error fetching /control/status: %v", err)
-		scrapeErrors.Inc()
-		return
-	}
-
-	protectionEnabled.Set(boolToFloat(status.ProtectionEnabled))
-	adguardRunning.Set(boolToFloat(status.Running))
-	avgProcessingTime.Set(status.DNS.ProcessingTime / 1000)
-	dhcpEnabled.Set(boolToFloat(status.DHCP.Enabled))
-	dhcpLeases.Set(float64(len(status.DHCP.Leases)))
-
-	var stats AdGuardStats
-	if err := fetchAdGuardData("/control/stats", &stats); err != nil {
-		logWarn("Error fetching /control/stats: %v", err)
-		scrapeErrors.Inc()
-		return
-	}
-
-	var totalQueries, totalBlocked, totalSafeSearch, totalSafeBrowsing int
-	for _, v := range stats.DNSQueries {
-		totalQueries += v
-	}
-	for _, v := range stats.BlockedFiltering {
-		totalBlocked += v
-	}
-	for _, v := range stats.ReplacedSafesearch {
-		totalSafeSearch += v
-	}
-	for _, v := range stats.ReplacedSafebrowsing {
-		totalSafeBrowsing += v
-	}
-
-	queries24h.Set(float64(totalQueries))
-	blockedFiltered.Set(float64(totalBlocked))
-	blockedSafesearch.Set(float64(totalSafeSearch))
-	blockedSafebrowsing.Set(float64(totalSafeBrowsing))
-
-	for _, m := range stats.TopQueried {
-		for k, v := range m {
-			topQueriedDomains.WithLabelValues(k).Set(float64(v))
+		topQueriedDomains.Reset()
+		for _, m := range stats.TopQueriedDomains {
+			for domain, val := range m {
+				topQueriedDomains.WithLabelValues(domain).Set(val)
+			}
 		}
-	}
-	for _, m := range stats.TopBlocked {
-		for k, v := range m {
-			topBlockedDomains.WithLabelValues(k).Set(float64(v))
+		topBlockedDomains.Reset()
+		for _, m := range stats.TopBlockedDomains {
+			for domain, val := range m {
+				topBlockedDomains.WithLabelValues(domain).Set(val)
+			}
 		}
-	}
-	for _, m := range stats.TopClients {
-		for k, v := range m {
-			topClients.WithLabelValues(k).Set(float64(v))
+		topClients.Reset()
+		for _, m := range stats.TopClients {
+			for client, val := range m {
+				topClients.WithLabelValues(client).Set(val)
+			}
 		}
-	}
-	for _, m := range stats.TopUpstreams {
-		for k, v := range m {
-			topUpstreams.WithLabelValues(k).Set(float64(v))
+		topUpstreams.Reset()
+		for _, m := range stats.TopUpstream {
+			for up, val := range m {
+				topUpstreams.WithLabelValues(up).Set(val)
+			}
 		}
-	}
-	for _, m := range stats.TopUpstreamsResponseTimes {
-		for k, v := range m {
-			topUpstreamsResponseTime.WithLabelValues(k).Set(v)
+		topUpstreamTime.Reset()
+		for _, m := range stats.TopUpstreamTime {
+			for up, val := range m {
+				topUpstreamTime.WithLabelValues(up).Set(val)
+			}
 		}
+		logLevel("DEBUG", fmt.Sprintf("Fetched stats: %+v", stats))
 	}
 
-	logDebug("Metrics updated: queries=%d, blocked=%d", totalQueries, totalBlocked)
+	status, err := fetchStatus()
+	if err == nil {
+		statusProtectionEnabled.Set(boolToFloat(status.ProtectionEnabled))
+		statusRunning.Set(boolToFloat(status.Running))
+		statusDHCPAvailable.Set(boolToFloat(status.DHCPAvailable))
+		statusDisabledDuration.Set(float64(status.ProtectionDisabledDuration))
+		versionInfo.Reset()
+		versionInfo.WithLabelValues(status.Version).Set(1)
+		logLevel("DEBUG", fmt.Sprintf("Fetched status: %+v", status))
+	}
+
+	updateQueryLogMetrics()
 }
 
 func boolToFloat(b bool) float64 {
@@ -271,15 +294,24 @@ func boolToFloat(b bool) float64 {
 }
 
 func main() {
-	ticker := time.NewTicker(scrapeInterval)
+	scrapeIntervalStr := os.Getenv("SCRAPE_INTERVAL")
+	port := os.Getenv("EXPORTER_PORT")
+	if port == "" {
+		port = "9617"
+	}
+	interval, err := strconv.Atoi(scrapeIntervalStr)
+	if err != nil || interval < 1 {
+		interval = 30
+	}
+
 	go func() {
-		for range ticker.C {
+		for {
 			updateMetrics()
+			time.Sleep(time.Duration(interval) * time.Second)
 		}
 	}()
 
-	updateMetrics()
 	http.Handle("/metrics", promhttp.Handler())
-	logInfo("Starting AdGuard exporter on :%s", exporterPort)
-	log.Fatal(http.ListenAndServe(":"+exporterPort, nil))
+	logLevel("INFO", fmt.Sprintf("Starting exporter at :%s", port))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
