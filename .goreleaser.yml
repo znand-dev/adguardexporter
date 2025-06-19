@@ -35,5 +35,8 @@ dockers:
       - ghcr.io/znand-dev/adguard-exporter:{{ .Version }}
       - ghcr.io/znand-dev/adguard-exporter:latest
     dockerfile: Dockerfile
-    build_flag_templates:
-      - "--build-context=default=."
+    use: buildx
+    goos:
+      - linux
+    goarch:
+      - amd64
