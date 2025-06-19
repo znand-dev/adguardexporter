@@ -31,7 +31,6 @@ dockers:
     dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/amd64"
-      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-amd64
       - ghcr.io/znand-dev/adguardexporter:latest-amd64
@@ -44,7 +43,6 @@ dockers:
     dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/arm64"
-      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-arm64v8
       - ghcr.io/znand-dev/adguardexporter:latest-arm64v8
@@ -57,7 +55,6 @@ dockers:
     dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/arm/v7"
-      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv7
       - ghcr.io/znand-dev/adguardexporter:latest-armv7
@@ -70,7 +67,6 @@ dockers:
     dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/arm/v6"
-      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv6
       - ghcr.io/znand-dev/adguardexporter:latest-armv6
