@@ -15,6 +15,24 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+/*
+ 📦 AdGuard Exporter for Prometheus
+ ----------------------------------
+ Author   : @znand-dev
+ License  : MIT
+ Repo     : https://github.com/znand-dev/adguardexporter
+
+ This Go application fetches stats from AdGuard Home via API endpoints
+ and exposes them as Prometheus metrics at `/metrics`.
+
+ Required ENV variables:
+ - ADGUARD_HOST        : AdGuard Home base URL (e.g. http://192.168.1.1:3000)
+ - ADGUARD_USER        : API username (your adguard user)
+ - ADGUARD_PASS        : API password (your adguard pass)
+ - EXPORTER_PORT       : Port to expose metrics (default: 9617)
+ - SCRAPE_INTERVAL     : Interval (in seconds) to fetch new stats (default: 15)
+*/
+
 type AdGuardStats struct {
 	NumDNSQueries       float64              `json:"num_dns_queries"`
 	NumBlockedFiltering float64              `json:"num_blocked_filtering"`
@@ -301,7 +319,7 @@ func main() {
 	}
 	interval, err := strconv.Atoi(scrapeIntervalStr)
 	if err != nil || interval < 1 {
-		interval = 30
+		interval = 15
 	}
 
 	go func() {
