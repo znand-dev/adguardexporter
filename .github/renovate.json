@@ -1,13 +1,23 @@
 {
   "extends": ["config:recommended"],
   "labels": ["renovate", "dependencies"],
-  "schedule": ["before 2am on monday"],
+  "schedule": ["before 3am on monday"],
   "packageRules": [
     {
-      "matchManagers": ["gomod", "dockerfile"],
-      "groupName": "go + docker deps",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Go modules"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "Docker base images",
       "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
     }
   ],
-  "ignorePaths": ["docs/**"]
+  "enabledManagers": ["gomod", "dockerfile", "github-actions"],
+  "ignorePaths": ["assets/**", "grafana/**", "*.env.save"]
 }
