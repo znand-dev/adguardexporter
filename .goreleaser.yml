@@ -1,16 +1,18 @@
-project_name: adguardexporter
+project_name: adguard-exporter
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: adguard
+  - id: universal
     main: main.go
     binary: adguard-exporter
     env: [CGO_ENABLED=0]
     goos:
       - linux
+      - windows
+      - darwin
     goarch:
       - amd64
       - arm64
@@ -18,13 +20,17 @@ builds:
 
 archives:
   - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
 
 checksum:
   name_template: 'checksums.txt'
 
 dockers:
   - id: docker-amd64
-    ids: [adguard]
+    ids: [universal]
     goos: linux
     goarch: amd64
     use: buildx
@@ -36,7 +42,7 @@ dockers:
       - ghcr.io/znand-dev/adguardexporter:latest-amd64
 
   - id: docker-arm64
-    ids: [adguard]
+    ids: [universal]
     goos: linux
     goarch: arm64
     use: buildx
@@ -47,20 +53,8 @@ dockers:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-arm64v8
       - ghcr.io/znand-dev/adguardexporter:latest-arm64v8
 
-  - id: docker-armv7
-    ids: [adguard]
-    goos: linux
-    goarch: arm
-    use: buildx
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--platform=linux/arm/v7"
-    image_templates:
-      - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv7
-      - ghcr.io/znand-dev/adguardexporter:latest-armv7
-
-  - id: docker-armv6
-    ids: [adguard]
+  - id: docker-arm
+    ids: [universal]
     goos: linux
     goarch: arm
     use: buildx
@@ -76,12 +70,10 @@ docker_manifests:
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-amd64
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-arm64v8
-      - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv7
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv6
 
   - name_template: ghcr.io/znand-dev/adguardexporter:latest
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:latest-amd64
       - ghcr.io/znand-dev/adguardexporter:latest-arm64v8
-      - ghcr.io/znand-dev/adguardexporter:latest-armv7
       - ghcr.io/znand-dev/adguardexporter:latest-armv6
