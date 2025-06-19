@@ -170,13 +170,11 @@ Inspired by:
 
 ## ✨ Screenshots
 
-<details>
-<summary>Grafana Dashboard Preview</summary>
+Grafana Dashboard Preview
 
-> _Soon..._ You can contribute a Grafana JSON 😎
+![dashboard1](./grafana/dashboard1.png)
 
-</details>
-
+![dashboard2](./grafana/dashboard2.png)
 ---
 
 ## 💬 Feedback

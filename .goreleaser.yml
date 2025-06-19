@@ -27,4 +27,4 @@ checksum:
 release:
   github:
     owner: znand-dev
-    name: adguardexportergo
+    name: adguardexporter
