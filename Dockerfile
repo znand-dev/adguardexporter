@@ -1,13 +1,11 @@
-FROM golang:1.22 AS builder
-WORKDIR /app
+FROM alpine:3.21.0 AS certs
+RUN apk add --no-cache ca-certificates
 
-COPY . .
+FROM scratch
+WORKDIR /
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o adguardexporter -ldflags="-s -w" main.go
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY adguard-exporter /adguard-exporter
+USER 65532:65532
 
-FROM alpine:latest
-WORKDIR /root/
-COPY --from=builder /app/adguardexporter /usr/bin/adguardexporter
-
-EXPOSE 9617
-ENTRYPOINT ["/usr/bin/adguardexporter"]
+ENTRYPOINT ["/adguard-exporter"]
