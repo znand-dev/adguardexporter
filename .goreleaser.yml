@@ -1,6 +1,7 @@
 version: 2
 
 project_name: adguard-exporter
+
 builds:
   - main: ./main.go
     binary: adguard-exporter
@@ -28,3 +29,15 @@ release:
   github:
     owner: znand-dev
     name: adguardexporter
+
+dockers:
+  - image_templates:
+      - ghcr.io/znand-dev/adguard-exporter:{{ .Version }}
+      - ghcr.io/znand-dev/adguard-exporter:latest
+    dockerfile: Dockerfile
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    use: buildx
