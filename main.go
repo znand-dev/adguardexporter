@@ -31,7 +31,27 @@ import (
  - ADGUARD_PASS        : API password (your adguard pass)
  - EXPORTER_PORT       : Port to expose metrics (default: 9617)
  - SCRAPE_INTERVAL     : Interval (in seconds) to fetch new stats (default: 15)
+ - LOG_LEVEL           : Logging level (options: DEBUG, INFO, WARN, ERROR — default: INFO)
 */
+
+var logLevelMap = map[string]int{"ERROR": 1, "WARN": 2, "INFO": 3, "DEBUG": 4}
+var currentLogLevel = 3 // default to INFO
+
+func initLogger() {
+	level := os.Getenv("LOG_LEVEL")
+	if level == "" {
+		level = "INFO"
+	}
+	if val, ok := logLevelMap[level]; ok {
+		currentLogLevel = val
+	}
+}
+
+func logX(level string, format string, args ...interface{}) {
+	if logLevelMap[level] <= currentLogLevel {
+		log.Printf("[%s] %s", level, fmt.Sprintf(format, args...))
+	}
+}
 
 type AdGuardStats struct {
 	NumDNSQueries       float64              `json:"num_dns_queries"`
@@ -72,7 +92,6 @@ type AdGuardQueryLog struct {
 }
 
 var (
-	// Stats & Status
 	dnsQueries = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "adguard_dns_queries_total", Help: "Total DNS queries received",
 	})
@@ -102,7 +121,6 @@ var (
 		Name: "adguard_version_info", Help: "AdGuard version info",
 	}, []string{"version"})
 
-	// Top stats
 	topQueriedDomains = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "adguard_top_queried_domain_total", Help: "Top queried domains",
 	}, []string{"domain"})
@@ -120,7 +138,6 @@ var (
 		Help: "Avg response time per upstream (s)",
 	}, []string{"upstream"})
 
-	// Querylog
 	queryCountByReason = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "adguard_query_reason_total", Help: "Total queries by reason",
 	}, []string{"reason"})
@@ -132,47 +149,37 @@ var (
 		Help:    "Query duration by client in ms",
 		Buckets: prometheus.LinearBuckets(1, 5, 10),
 	}, []string{"client"})
-        	queryCountByUpstream = prometheus.NewCounterVec(prometheus.CounterOpts{
+	queryCountByUpstream = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "adguard_query_upstream_total",
 		Help: "Total queries per upstream DNS server",
 	}, []string{"upstream"})
-
 	queryCountByDomain = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "adguard_query_domain_total",
 		Help: "Total queries per domain",
 	}, []string{"domain"})
-
 	queryCountClientReason = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "adguard_query_client_reason_total",
 		Help: "Total queries by client and reason",
 	}, []string{"client", "reason"})
-
 )
 
 func init() {
 	_ = godotenv.Load()
+	initLogger()
 	prometheus.MustRegister(
 		dnsQueries, blockedFiltering, replacedParental, avgProcessingTime,
 		statusProtectionEnabled, statusRunning, statusDHCPAvailable, statusDisabledDuration, versionInfo,
 		topQueriedDomains, topBlockedDomains, topClients, topUpstreams, topUpstreamTime,
 		queryCountByReason, queryCountByType, queryHistogramByClient,
+		queryCountByUpstream, queryCountByDomain, queryCountClientReason,
 	)
-        prometheus.MustRegister(queryCountByUpstream)
-	prometheus.MustRegister(queryCountByDomain)
-	prometheus.MustRegister(queryCountClientReason)
-
 }
 
-func logLevel(level, msg string) {
-	logLevelEnv := os.Getenv("LOG_LEVEL")
-	allowed := map[string]int{"ERROR": 1, "WARN": 2, "INFO": 3, "DEBUG": 4}
-	current := allowed[logLevelEnv]
-	if current == 0 {
-		current = 3
+func boolToFloat(b bool) float64 {
+	if b {
+		return 1
 	}
-	if allowed[level] <= current {
-		log.Printf("[%s] %s", level, msg)
-	}
+	return 0
 }
 
 func fetchStats() (*AdGuardStats, error) {
@@ -235,18 +242,18 @@ func fetchQueryLog() (*AdGuardQueryLog, error) {
 func updateQueryLogMetrics() {
 	logData, err := fetchQueryLog()
 	if err != nil {
-		logLevel("ERROR", fmt.Sprintf("Failed to fetch querylog: %v", err))
+		logX("ERROR", "Failed to fetch querylog: %v", err)
 		return
 	}
 	for _, q := range logData.Data {
 		queryCountByReason.WithLabelValues(q.Reason).Inc()
-                queryCountByType.WithLabelValues(q.Question.Type).Inc()
+		queryCountByType.WithLabelValues(q.Question.Type).Inc()
 		queryHistogramByClient.WithLabelValues(q.Client).Observe(q.Elapsed)
-                queryCountByUpstream.WithLabelValues(q.Upstream).Inc()
+		queryCountByUpstream.WithLabelValues(q.Upstream).Inc()
 		queryCountByDomain.WithLabelValues(q.Question.Name).Inc()
 		queryCountClientReason.WithLabelValues(q.Client, q.Reason).Inc()
 	}
-	logLevel("DEBUG", fmt.Sprintf("Processed %d querylog entries", len(logData.Data)))
+	logX("DEBUG", "Processed %d querylog entries", len(logData.Data))
 }
 
 func updateMetrics() {
@@ -287,7 +294,14 @@ func updateMetrics() {
 				topUpstreamTime.WithLabelValues(up).Set(val)
 			}
 		}
-		logLevel("DEBUG", fmt.Sprintf("Fetched stats: %+v", stats))
+
+		logX("DEBUG", "Fetched stats: queries=%.0f blocked=%.0f replaced=%.0f avgTime=%.2fms topDomains=%d",
+			stats.NumDNSQueries,
+			stats.NumBlockedFiltering,
+			stats.NumReplacedParental,
+			stats.AvgProcessingTime,
+			len(stats.TopQueriedDomains),
+		)
 	}
 
 	status, err := fetchStatus()
@@ -298,17 +312,12 @@ func updateMetrics() {
 		statusDisabledDuration.Set(float64(status.ProtectionDisabledDuration))
 		versionInfo.Reset()
 		versionInfo.WithLabelValues(status.Version).Set(1)
-		logLevel("DEBUG", fmt.Sprintf("Fetched status: %+v", status))
+
+		logX("DEBUG", "Fetched status: running=%t protection=%t DHCP=%t version=%s",
+			status.Running, status.ProtectionEnabled, status.DHCPAvailable, status.Version)
 	}
 
 	updateQueryLogMetrics()
-}
-
-func boolToFloat(b bool) float64 {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 func main() {
@@ -330,6 +339,10 @@ func main() {
 	}()
 
 	http.Handle("/metrics", promhttp.Handler())
-	logLevel("INFO", fmt.Sprintf("Starting exporter at :%s", port))
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	logX("INFO", "Starting exporter at :%s ..", port)
+	err = http.ListenAndServe(":"+port, nil)
+	if err != nil {
+		logX("ERROR", "Server failed: %v", err)
+		os.Exit(1)
+	}
 }
