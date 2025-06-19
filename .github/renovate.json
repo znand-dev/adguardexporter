@@ -1,23 +1,29 @@
 {
-  "extends": ["config:recommended"],
-  "labels": ["renovate", "dependencies"],
-  "schedule": ["before 3am on monday"],
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": [
+    "renovate::dependencies",
+    "{{#if category}}renovate::{{category}}{{/if}}",
+    "{{#if updateType}}renovate::{{updateType}}{{/if}}",
+    "{{#if datasource}}renovate::{{datasource}}{{/if}}",
+    "{{#if manager}}renovate::{{manager}}{{/if}}",
+    "{{#if vulnerabilitySeverity}}renovate::{{vulnerabilitySeverity}}{{/if}}",
+    "renovate::{{#if isVulnerabilityAlert}}vulnerability{{else}}not-vulnerability{{/if}}"
+  ],
+  "pinDigests": false,
+  "enabled": true,
+  "separateMajorMinor": true,
+  "automerge": true,
   "packageRules": [
     {
-      "matchManagers": ["gomod"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "Go modules"
-    },
-    {
-      "matchManagers": ["dockerfile"],
-      "groupName": "Docker base images",
-      "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
-      "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions"
+      "matchManagers": [
+        "gomod"
+      ],
+      "postUpdateOptions": [
+        "gomodTidy"
+      ]
     }
-  ],
-  "enabledManagers": ["gomod", "dockerfile", "github-actions"],
-  "ignorePaths": ["assets/**", "grafana/**", "*.env.save"]
+  ]
 }
