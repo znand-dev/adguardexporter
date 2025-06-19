@@ -5,8 +5,10 @@ before:
     - go mod tidy
 
 builds:
-  - env: [CGO_ENABLED=0]
+  - id: adguard
+    env: [CGO_ENABLED=0]
     main: main.go
+    binary: adguard-exporter
     goos:
       - linux
       - windows
@@ -23,7 +25,9 @@ checksum:
   name_template: 'checksums.txt'
 
 dockers:
-  - goos: linux
+  - id: docker-amd64
+    ids: [adguard]
+    goos: linux
     goarch: amd64
     use: buildx
     build_flag_templates:
@@ -33,7 +37,9 @@ dockers:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-amd64
       - ghcr.io/znand-dev/adguardexporter:latest-amd64
 
-  - goos: linux
+  - id: docker-arm64
+    ids: [adguard]
+    goos: linux
     goarch: arm64
     use: buildx
     build_flag_templates:
@@ -43,7 +49,9 @@ dockers:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-arm64v8
       - ghcr.io/znand-dev/adguardexporter:latest-arm64v8
 
-  - goos: linux
+  - id: docker-armv7
+    ids: [adguard]
+    goos: linux
     goarch: arm
     use: buildx
     build_flag_templates:
@@ -53,7 +61,9 @@ dockers:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv7
       - ghcr.io/znand-dev/adguardexporter:latest-armv7
 
-  - goos: linux
+  - id: docker-armv6
+    ids: [adguard]
+    goos: linux
     goarch: arm
     use: buildx
     build_flag_templates:
