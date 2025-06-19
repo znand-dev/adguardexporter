@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 project_name: adguard-exporter
 
@@ -41,7 +41,6 @@ dockers:
     build_flag_templates:
       - "--platform=linux/amd64"
     dockerfile: Dockerfile
-    context: .
     image_templates:
       - ghcr.io/znand-dev/adguard-exporter:{{ .Version }}-amd64
       - ghcr.io/znand-dev/adguard-exporter:latest-amd64
