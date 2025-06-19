@@ -35,8 +35,3 @@ dockers:
       - ghcr.io/znand-dev/adguard-exporter:{{ .Version }}
       - ghcr.io/znand-dev/adguard-exporter:latest
     dockerfile: Dockerfile
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm64
