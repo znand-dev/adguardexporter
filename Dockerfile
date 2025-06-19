@@ -1,20 +1,23 @@
-FROM golang:1.24 AS builder
-
+# Stage 1: Builder
+FROM golang:1.22 AS builder
 WORKDIR /app
+
+# Copy go.mod dan go.sum dulu supaya caching optimal
+COPY go.mod go.sum ./
+
+# Run go mod tidy atau download (ini sekarang aman)
+RUN go mod download
+
+# Sekarang copy semua source code
 COPY . .
 
-RUN go mod tidy
+# Build binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o adguardexporter -ldflags="-s -w" main.go
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o adguard-exporter -ldflags="-s -w" main.go
+# Stage 2: Final image
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/adguardexporter /usr/bin/adguardexporter
 
-# Final image
-FROM scratch
-
-COPY --from=builder /app/adguard-exporter /adguard-exporter
-
-# For SSL root CAs
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-
-WORKDIR /
-USER 65532:65532
-ENTRYPOINT ["/adguard-exporter"]
+EXPOSE 9617
+ENTRYPOINT ["/usr/bin/adguardexporter"]
