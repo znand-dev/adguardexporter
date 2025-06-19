@@ -27,8 +27,8 @@ import (
 
  Required ENV variables:
  - ADGUARD_HOST        : AdGuard Home base URL (e.g. http://192.168.1.1:3000)
- - ADGUARD_USER        : API username
- - ADGUARD_PASS        : API password
+ - ADGUARD_USER        : API username (your adguard user)
+ - ADGUARD_PASS        : API password (your adguard pass)
  - EXPORTER_PORT       : Port to expose metrics (default: 9617)
  - SCRAPE_INTERVAL     : Interval (in seconds) to fetch new stats (default: 15)
 */
