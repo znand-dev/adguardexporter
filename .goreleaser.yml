@@ -40,4 +40,3 @@ dockers:
     goarch:
       - amd64
       - arm64
-    use: buildx
