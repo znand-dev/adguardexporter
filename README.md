@@ -172,9 +172,9 @@ Inspired by:
 
 Grafana Dashboard Preview
 
-![dashboard1](./grafana/dashboard1.png)
+![dashboard1](./grafana/dashboard2.png)
 
-![dashboard2](./grafana/dashboard2.png)
+![dashboard2](./grafana/dashboard1.png)
 ---
 
 ## 💬 Feedback
