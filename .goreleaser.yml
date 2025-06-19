@@ -6,13 +6,11 @@ before:
 
 builds:
   - id: adguard
-    env: [CGO_ENABLED=0]
     main: main.go
     binary: adguard-exporter
+    env: [CGO_ENABLED=0]
     goos:
       - linux
-      - windows
-      - darwin
     goarch:
       - amd64
       - arm64
@@ -30,9 +28,10 @@ dockers:
     goos: linux
     goarch: amd64
     use: buildx
+    dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/amd64"
-    dockerfile: Dockerfile
+      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-amd64
       - ghcr.io/znand-dev/adguardexporter:latest-amd64
@@ -42,9 +41,10 @@ dockers:
     goos: linux
     goarch: arm64
     use: buildx
-    build_flag_templates:
-      - "--platform=linux/arm64/v8"
     dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-arm64v8
       - ghcr.io/znand-dev/adguardexporter:latest-arm64v8
@@ -54,9 +54,10 @@ dockers:
     goos: linux
     goarch: arm
     use: buildx
+    dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/arm/v7"
-    dockerfile: Dockerfile
+      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv7
       - ghcr.io/znand-dev/adguardexporter:latest-armv7
@@ -66,9 +67,10 @@ dockers:
     goos: linux
     goarch: arm
     use: buildx
+    dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/arm/v6"
-    dockerfile: Dockerfile
+      - "--build-arg=BASE_IMAGE=alpine:3.21.0"
     image_templates:
       - ghcr.io/znand-dev/adguardexporter:{{ .Tag }}-armv6
       - ghcr.io/znand-dev/adguardexporter:latest-armv6
