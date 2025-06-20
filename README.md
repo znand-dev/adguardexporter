@@ -29,7 +29,7 @@ Before running this exporter, make sure:
 - 🔐 You have a valid AdGuard username & password
 - 📡 Prometheus is configured to scrape this exporter
 - 🐳 Docker installed (or alternatively Go 1.20+ for building from source)
-- 🔓 Port `9200` is available on your system
+- 🔓 Port `9600` is available on your system
 
 To make sure the endpoint is valid, you can check the endpoints via curl
 
@@ -54,7 +54,7 @@ curl -v -u yourusername:yourpassword <ADGUARD_URL>:PORT/control/querylog
 | `ADGUARD_HOST`     | URL to your AdGuard Home API          | ✅       | `http://192.168.1.1:3000`    |
 | `ADGUARD_USER`| AdGuard Home username                 | ✅       | `admin`                      |
 | `ADGUARD_PASS`| AdGuard Home password                 | ✅       | `secretpassword`             |
-| `EXPORTER_PORT`   | Port to expose metrics (default: 9200)| ❌       | `9200`                       |
+| `EXPORTER_PORT`   | Port to expose metrics (default: 9617) | ❌       | `9200`                       |
 | `SCRAPE_INTERVAL` | How often to scrape (default: 15s)    | ❌       | `30s`                        |
 | `LOG_LEVEL`       | Log Level to analyze, INFO, WARN, DEBUG | ❌      | `DEBUG`,`WARN`,`INFO`        |
 
@@ -160,17 +160,11 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ---
 
-## 🙌 Credits
-
-Inspired by:
-- [HenryWhitaker3](https://github.com/HenryWhitaker3)
-- The AdGuard team for their awesome API
-
----
-
 ## ✨ Screenshots
 
 Grafana Dashboard Preview
+
+[Live preview and monitoring, click here](https://statistic.znand.biz.id/public-dashboards/8002a1306e7649c988b3f93e1d8914d0)
 
 ![dashboard1](./grafana/dashboard1.png)
 
