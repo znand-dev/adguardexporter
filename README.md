@@ -163,7 +163,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ## 🙌 Credits
 
 Inspired by:
-- [HenryWhitaker3/adguard-exporter](https://github.com/HenryWhitaker3/AdGuardHome-exporter)
+- [HenryWhitaker3](https://github.com/HenryWhitaker3)
 - The AdGuard team for their awesome API
 
 ---
