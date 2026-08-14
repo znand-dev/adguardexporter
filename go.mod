@@ -2,12 +2,11 @@ module github.com/znand-dev/adguardexporter
 
 go 1.25.0
 
-toolchain go1.26.5
+toolchain go1.26.6
 
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/oschwald/geoip2-golang v1.13.0
-	github.com/oschwald/geoip2-golang/v2 v2.3.0
 	github.com/prometheus/client_golang v1.24.1
 )
 
